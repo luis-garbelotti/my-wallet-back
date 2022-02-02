@@ -18,10 +18,21 @@ const userSchema = joi.object({
     email: joi.string().email().required()
 });
 
+const loginSchema = joi.object({
+    email: joi.string().email().required(),
+    password: joi.string().required()
+})
+
 app.post('/', async (req, res) => {
 
     const { email, password } = req.body;
     let mongoClient;
+
+    const validation = loginSchema.validate(req.body);
+
+    if (validation.error) {
+        return res.sendStatus(422);
+    }
 
     try {
 
