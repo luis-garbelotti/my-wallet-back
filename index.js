@@ -2,6 +2,7 @@ import express, { json } from 'express';
 import { MongoClient } from "mongodb";
 import bcrypt from 'bcrypt';
 import cors from 'cors';
+import joi from 'joi';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -9,6 +10,12 @@ const app = express();
 
 app.use(cors());
 app.use(json());
+
+const userSchema = joi.object({
+    name: joi.string().required(),
+    password: joi.string().required(),
+    email: joi.string().email().required()
+})
 
 app.post('/', (req, res) => {
 
@@ -20,6 +27,12 @@ app.post('/register', async (req, res) => {
 
     const user = req.body;
     let mongoClient;
+
+    const validation = userSchema.validate(user);
+
+    if (validation.error) {
+        return res.sendStatus(422);
+    }
 
     try {
 
@@ -34,6 +47,7 @@ app.post('/register', async (req, res) => {
 
         if (findUser) {
             res.sendStatus(409);
+            mongoClient.close();
             return;
         }
 
@@ -43,9 +57,11 @@ app.post('/register', async (req, res) => {
         })
 
         res.sendStatus(201);
+        mongoClient.close();
 
     } catch (error) {
         res.sendStatus(500);
+        mongoClient.close();
     }
 
 })
