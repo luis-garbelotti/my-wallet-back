@@ -1,8 +1,9 @@
 import express, { json } from 'express';
 import { MongoClient } from "mongodb";
-import bcrypt from 'bcrypt';
 import cors from 'cors';
 import joi from 'joi';
+import bcrypt from 'bcrypt';
+import { v4 as uuid } from 'uuid';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -15,12 +16,37 @@ const userSchema = joi.object({
     name: joi.string().required(),
     password: joi.string().required(),
     email: joi.string().email().required()
-})
+});
 
-app.post('/', (req, res) => {
+app.post('/', async (req, res) => {
 
-    res.sendStatus(201);
+    const { email, password } = req.body;
+    let mongoClient;
 
+    try {
+
+        mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+
+        const dbMyWallet = mongoClient.db('my-wallet');
+        const user = await dbMyWallet.collection('users').findOne({ email });
+
+        if (user && bcrypt.compareSync(password, user.password)) {
+            const token = uuid();
+
+            await dbMyWallet.collection('sessions').insertOne({ token, userId: user._id });
+            return res.send({ token });
+        }
+
+        res.sendStatus(401);
+        mongoClient.close();
+
+    } catch (error) {
+
+        res.sendStatus(500);
+        mongoClient.close();
+
+    }
 })
 
 app.post('/register', async (req, res) => {
