@@ -1,5 +1,5 @@
 import express, { json } from 'express';
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import cors from 'cors';
 import joi from 'joi';
 import bcrypt from 'bcrypt';
@@ -46,7 +46,10 @@ app.post('/', async (req, res) => {
             const token = uuid();
 
             await dbMyWallet.collection('sessions').insertOne({ token, userId: user._id });
-            return res.send({ token });
+            delete user.password;
+            delete user.email;
+            const response = { ...user, token };
+            return res.send(response);
         }
 
         res.sendStatus(401);
@@ -99,6 +102,40 @@ app.post('/register', async (req, res) => {
     } catch (error) {
         res.sendStatus(500);
         mongoClient.close();
+    }
+
+})
+
+app.post('/deposit', async (req, res) => {
+
+    const deposit = req.body;
+    console.log(deposit);
+    let mongoClient;
+
+    try {
+        mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+        console.log('conectou')
+
+        const dbMyWallet = mongoClient.db('my-wallet');
+        console.log('my wallet')
+
+        const user = await dbMyWallet.collection('users').findOne({ _id: new ObjectId(deposit.userId) });
+        console.log('procurou user')
+
+        if (user) {
+            console.log('achou user');
+
+            await dbMyWallet.collection('transactions').insertOne({ ...deposit, userId: user._id });
+            console.log('inseriu nas transações');
+            res.sendStatus(201);
+            return;
+        }
+
+        res.sendStatus(401);
+
+    } catch (error) {
+        res.sendStatus(500)
     }
 
 })
