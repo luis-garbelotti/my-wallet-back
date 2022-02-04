@@ -164,6 +164,40 @@ app.post('/payment', async (req, res) => {
         mongoClient.close();
     }
 
+});
+
+app.get('/historic', async (req, res) => {
+    const authorization = req.headers.authorization;
+    const token = authorization?.replace('Bearer ', '');
+    let mongoClient;
+
+    try {
+
+        mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+
+        const dbMyWallet = mongoClient.db('my-wallet');
+
+        const userSession = await dbMyWallet.collection('sessions').findOne({ token });
+
+        if (!userSession) {
+            return res.sendStatus(401);
+        }
+
+        const userTransactions = await dbMyWallet.collection('transactions').find({ userId: userSession.userId }).toArray();
+
+        if (!userTransactions) {
+            mongoClient.close();
+            return res.sendStatus(401);
+        }
+
+        res.send(userTransactions);
+        mongoClient.close();
+
+    } catch (error) {
+        res.sendStatus(500);
+        mongoClient.close();
+    }
 })
 
 app.listen(5000);
