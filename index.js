@@ -181,6 +181,7 @@ app.get('/historic', async (req, res) => {
         const userSession = await dbMyWallet.collection('sessions').findOne({ token });
 
         if (!userSession) {
+            mongoClient.close();
             return res.sendStatus(401);
         }
 
@@ -188,10 +189,108 @@ app.get('/historic', async (req, res) => {
 
         if (!userTransactions) {
             mongoClient.close();
-            return res.sendStatus(401);
+            return res.sendStatus(404);
         }
 
         res.send(userTransactions);
+        mongoClient.close();
+
+    } catch (error) {
+        res.sendStatus(500);
+        mongoClient.close();
+    }
+});
+
+app.put('/update-deposit/:idTransaction', async (req, res) => {
+
+    const authorization = req.headers.authorization;
+    const token = authorization?.replace('Bearer ', '');
+    const { idTransaction } = req.params;
+
+    const updatedTransaction = req.body.body;
+
+    let mongoClient;
+
+    try {
+
+        mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+
+        const dbMyWallet = mongoClient.db('my-wallet');
+
+        const userSession = await dbMyWallet.collection('sessions').findOne({ token });
+
+        if (!userSession) {
+            mongoClient.close();
+            return res.sendStatus(401);
+        }
+
+        const transaction = await dbMyWallet.collection('transactions').findOne({ _id: new ObjectId(idTransaction) });
+
+        if (!transaction) {
+            mongoClient.close();
+            return res.sendStatus(404);
+        }
+
+        await dbMyWallet.collection('transactions').updateOne({
+            _id: transaction._id
+        }, {
+            $set: {
+                description: updatedTransaction.description,
+                value: updatedTransaction.value
+            }
+        })
+
+        res.sendStatus(201);
+        mongoClient.close();
+
+    } catch (error) {
+        res.sendStatus(500);
+        mongoClient.close();
+    }
+})
+
+app.put('/update-payment/:idTransaction', async (req, res) => {
+
+    const authorization = req.headers.authorization;
+    const token = authorization?.replace('Bearer ', '');
+    const { idTransaction } = req.params;
+
+    const updatedTransaction = req.body.body;
+
+    let mongoClient;
+
+    try {
+
+        mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+
+        const dbMyWallet = mongoClient.db('my-wallet');
+
+        const userSession = await dbMyWallet.collection('sessions').findOne({ token });
+
+        if (!userSession) {
+            mongoClient.close();
+            return res.sendStatus(401);
+        }
+
+        const transaction = await dbMyWallet.collection('transactions').findOne({ _id: new ObjectId(idTransaction) });
+
+        if (!transaction) {
+            mongoClient.close();
+            return res.sendStatus(404);
+        }
+
+        await dbMyWallet.collection('transactions').updateOne({
+            _id: transaction._id
+        }, {
+            $set: {
+                description: updatedTransaction.description,
+                value: updatedTransaction.value
+            }
+        })
+
+        res.sendStatus(201);
         mongoClient.close();
 
     } catch (error) {
