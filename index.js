@@ -299,4 +299,45 @@ app.put('/update-payment/:idTransaction', async (req, res) => {
     }
 })
 
+app.delete('/historic/:idTransaction', async (req, res) => {
+
+    const authorization = req.headers.authorization;
+
+    const token = authorization?.replace('Bearer ', '');
+    const { idTransaction } = req.params;
+
+    let mongoClient;
+
+    try {
+
+        mongoClient = new MongoClient(process.env.MONGO_URI);
+        await mongoClient.connect();
+
+        const dbMyWallet = mongoClient.db('my-wallet');
+
+        const userSession = await dbMyWallet.collection('sessions').findOne({ token });
+
+        if (!userSession) {
+            mongoClient.close();
+            return res.sendStatus(401);
+        }
+
+        const transaction = await dbMyWallet.collection('transactions').findOne({ _id: new ObjectId(idTransaction) });
+
+        if (!transaction) {
+            mongoClient.close();
+            return res.sendStatus(404);
+        }
+
+        await dbMyWallet.collection('transactions').deleteOne({ _id: transaction._id })
+
+        res.sendStatus(201);
+        mongoClient.close();
+
+    } catch (error) {
+        res.sendStatus(500);
+        mongoClient.close();
+    }
+})
+
 app.listen(5000);
