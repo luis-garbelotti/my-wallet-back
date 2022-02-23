@@ -27,11 +27,11 @@ The following tools and frameworks were used in the construction of the project:
 1. Clone this repository
 2. Clone the front-end repository <a href='https://github.com/luis-garbelotti/my-wallet-front'>here</a>
 3. Follow the instructions to run the front-end <a href='https://github.com/luis-garbelotti/my-wallet-front'>here</a>
-4. Install fornt-end dependencies
+4. Install back-end dependencies
 ```bash
 npm i
 ```
-5. Run the front-end with
+5. Run the back-end with
 ```bash
 npm run start
 ```
